@@ -46,11 +46,17 @@ export default function Home() {
 
     // 2. Try Supabase profile (may override stored if different device)
     try {
-      const { data, error } = await supabase
+      type ProfileRow = {
+        area_id: string; area_name: string; province_id: string; province_name: string;
+        municipality_id: string | null; ward_number: number | null; ward_places: string[] | null;
+        username: string | null;
+      };
+      const { data: _data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", sessionUser.id)
         .single();
+      const data = _data as ProfileRow | null;
 
       if (data) {
         const area: Area = {
@@ -134,7 +140,7 @@ export default function Home() {
         ward_places: area.ward_places ?? null,
         username: username ?? user.user_metadata?.username ?? null,
         updated_at: new Date().toISOString(),
-      });
+      } as never);
       if (error) console.error("[YourHood] profile save error:", error);
     }
   }
@@ -173,7 +179,7 @@ export default function Home() {
         province_name: selectedArea?.province_name,
         user_id: user?.id ?? "anon",
         posted_by: username ?? user?.email?.split("@")[0] ?? "Anonymous",
-      })
+      } as never)
       .select()
       .single();
 
