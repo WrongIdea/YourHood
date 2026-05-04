@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Post } from "@/types";
 import { CATEGORY_CONFIG, timeAgo } from "@/lib/utils";
 import { useState } from "react";
@@ -111,10 +112,13 @@ export default function PostCard({ post, currentUserId, onReport, onDelete }: Po
 
         {/* Location + time */}
         <span className="flex items-center gap-1.5">
-          <span className="flex items-center gap-1">
+          <Link
+            href={`/area/${post.area_id}`}
+            className="flex items-center gap-1 hover:text-zinc-200 transition-colors"
+          >
             <span>📍</span>
             <span>{post.area_name}</span>
-          </span>
+          </Link>
           <span>·</span>
           <span>{timeAgo(post.created_at)}</span>
         </span>
