@@ -9,6 +9,8 @@ interface FeedProps {
   activeFilter: Category | "all";
   onFilterChange: (f: Category | "all") => void;
   onReport: (postId: string) => void;
+  onDelete: (postId: string) => void;
+  currentUserId?: string | null;
   loading?: boolean;
 }
 
@@ -20,7 +22,7 @@ const FILTERS: Array<{ key: Category | "all"; label: string; emoji: string }> = 
   { key: "announcement", label: "Events", emoji: CATEGORY_CONFIG.announcement.emoji },
 ];
 
-export default function Feed({ posts, activeFilter, onFilterChange, onReport, loading }: FeedProps) {
+export default function Feed({ posts, activeFilter, onFilterChange, onReport, onDelete, currentUserId, loading }: FeedProps) {
   return (
     <section>
       {/* Filter chips */}
@@ -60,7 +62,7 @@ export default function Feed({ posts, activeFilter, onFilterChange, onReport, lo
       ) : (
         <div className="space-y-3">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} onReport={onReport} />
+            <PostCard key={post.id} post={post} currentUserId={currentUserId} onReport={onReport} onDelete={onDelete} />
           ))}
         </div>
       )}

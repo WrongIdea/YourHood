@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useRef } from "react";
+import type { User } from "@supabase/supabase-js";
 import { Category, NewPost, Area } from "@/types";
 import { CATEGORY_CONFIG } from "@/lib/utils";
 
 interface PostCreatorProps {
   selectedArea: Area | null;
+  user: User | null;
   onPost: (post: NewPost) => void;
   onSelectArea: () => void;
+  onAuthRequired: () => void;
 }
 
 const CATEGORIES: Category[] = ["alert", "outage", "lost_found", "announcement"];
 
-export default function PostCreator({ selectedArea, onPost, onSelectArea }: PostCreatorProps) {
+export default function PostCreator({ selectedArea, user, onPost, onSelectArea, onAuthRequired }: PostCreatorProps) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<Category>("announcement");
   const [content, setContent] = useState("");
@@ -20,6 +23,7 @@ export default function PostCreator({ selectedArea, onPost, onSelectArea }: Post
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function handleOpen() {
+    if (!user) { onAuthRequired(); return; }
     if (!selectedArea) { onSelectArea(); return; }
     setOpen(true);
     setTimeout(() => textareaRef.current?.focus(), 50);
@@ -42,7 +46,11 @@ export default function PostCreator({ selectedArea, onPost, onSelectArea }: Post
         className="w-full bg-zinc-800/60 hover:bg-zinc-800 border border-zinc-700/60 rounded-2xl px-4 py-3.5 text-left text-zinc-500 text-sm transition-colors flex items-center gap-3"
       >
         <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-base shrink-0">📣</span>
-        <span>What's happening in {selectedArea ? selectedArea.name : "your area"}?</span>
+        <span>
+          {!user
+            ? "Sign in to post in your community"
+            : `What's happening in ${selectedArea ? selectedArea.name : "your area"}?`}
+        </span>
       </button>
     );
   }

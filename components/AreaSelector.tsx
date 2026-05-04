@@ -7,14 +7,16 @@ import { PROVINCES, MUNICIPALITIES, WARDS, WardEntry } from "@/lib/mock-data";
 interface AreaSelectorProps {
   onSelect: (area: Area) => void;
   onClose: () => void;
+  required?: boolean;
 }
 
-type Step = "province" | "municipality" | "ward";
+type Step = "province" | "municipality" | "ward" | "place";
 
-export default function AreaSelector({ onSelect, onClose }: AreaSelectorProps) {
+export default function AreaSelector({ onSelect, onClose, required = false }: AreaSelectorProps) {
   const [step, setStep] = useState<Step>("province");
   const [selectedProvince, setSelectedProvince] = useState<Province | null>(null);
   const [selectedMunicipality, setSelectedMunicipality] = useState<Area | null>(null);
+  const [selectedWard, setSelectedWard] = useState<WardEntry | null>(null);
   const [search, setSearch] = useState("");
 
   const municipalities = selectedProvince
@@ -39,6 +41,10 @@ export default function AreaSelector({ onSelect, onClose }: AreaSelectorProps) {
     );
   });
 
+  const filteredPlaces = (selectedWard?.places ?? []).filter((p) =>
+    p.toLowerCase().includes(search.toLowerCase())
+  );
+
   function handleProvinceSelect(province: Province) {
     setSelectedProvince(province);
     setSearch("");
@@ -59,22 +65,44 @@ export default function AreaSelector({ onSelect, onClose }: AreaSelectorProps) {
 
   function handleWardSelect(ward: WardEntry) {
     if (!selectedMunicipality) return;
-    const placesLabel = ward.places.slice(0, 2).join(", ");
-    const wardArea: Area = {
-      id: `${selectedMunicipality.id}-w${ward.number}`,
-      name: `Ward ${ward.number} – ${placesLabel}`,
+    if (ward.places.length === 1) {
+      // Single place — select immediately
+      buildAndSelect(ward, ward.places[0]);
+    } else {
+      // Multiple places — let user pick one
+      setSelectedWard(ward);
+      setSearch("");
+      setStep("place");
+    }
+  }
+
+  function handlePlaceSelect(place: string) {
+    if (!selectedWard) return;
+    buildAndSelect(selectedWard, place);
+  }
+
+  function buildAndSelect(ward: WardEntry, place: string) {
+    if (!selectedMunicipality) return;
+    const slug = place.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    const area: Area = {
+      id: `${selectedMunicipality.id}-w${ward.number}-${slug}`,
+      name: place,
       province_id: selectedMunicipality.province_id,
       province_name: selectedMunicipality.province_name,
       municipality_id: selectedMunicipality.id,
       ward_number: ward.number,
       ward_places: ward.places,
     };
-    onSelect(wardArea);
+    onSelect(area);
     onClose();
   }
 
   function handleBack() {
-    if (step === "ward") {
+    if (step === "place") {
+      setStep("ward");
+      setSelectedWard(null);
+      setSearch("");
+    } else if (step === "ward") {
       setStep("municipality");
       setSelectedMunicipality(null);
       setSearch("");
@@ -85,12 +113,29 @@ export default function AreaSelector({ onSelect, onClose }: AreaSelectorProps) {
     }
   }
 
-  const totalSteps = step === "ward" || (selectedMunicipality && wardList.length > 0) ? 3 : 2;
-  const stepIndex = step === "province" ? 0 : step === "municipality" ? 1 : 2;
+  const totalSteps = step === "place" ? 4
+    : (step === "ward" || wardList.length > 0) ? 3
+    : 2;
+  const stepIndex = step === "province" ? 0
+    : step === "municipality" ? 1
+    : step === "ward" ? 2
+    : 3;
+
+  const headerTitle =
+    step === "province" ? "Select your province"
+    : step === "municipality" ? selectedProvince?.name
+    : step === "ward" ? selectedMunicipality?.name
+    : `Ward ${selectedWard?.number}`;
+
+  const headerSub =
+    step === "municipality" ? "Select your municipality"
+    : step === "ward" ? "Select your ward"
+    : step === "place" ? "Select your place"
+    : undefined;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={required ? undefined : onClose} />
 
       <div className="relative w-full max-w-md bg-zinc-900 rounded-t-2xl sm:rounded-2xl border border-zinc-700 shadow-2xl overflow-hidden">
 
@@ -109,26 +154,25 @@ export default function AreaSelector({ onSelect, onClose }: AreaSelectorProps) {
               </button>
             )}
             <div className="flex-1">
-              <h2 className="text-white font-semibold text-base leading-tight">
-                {step === "province"
-                  ? "Select your province"
-                  : step === "municipality"
-                  ? selectedProvince?.name
-                  : selectedMunicipality?.name}
-              </h2>
-              {step === "municipality" && (
-                <p className="text-zinc-500 text-xs mt-0.5">Select your municipality</p>
-              )}
-              {step === "ward" && (
-                <p className="text-zinc-500 text-xs mt-0.5">Select your ward</p>
-              )}
+              <h2 className="text-white font-semibold text-base leading-tight">{headerTitle}</h2>
+              {headerSub && <p className="text-zinc-500 text-xs mt-0.5">{headerSub}</p>}
             </div>
-            <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors shrink-0">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {!required && (
+              <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors shrink-0">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
+
+          {/* Required banner */}
+          {required && (
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2 mb-3">
+              <span className="text-base">📍</span>
+              <p className="text-emerald-400 text-xs">Choose your place to start posting in your community</p>
+            </div>
+          )}
 
           {/* Step indicator */}
           <div className="flex items-center gap-2 mb-3">
@@ -142,11 +186,13 @@ export default function AreaSelector({ onSelect, onClose }: AreaSelectorProps) {
             ))}
           </div>
 
-          {(step === "municipality" || step === "ward") && (
+          {(step === "municipality" || step === "ward" || step === "place") && (
             <input
               type="text"
               placeholder={
-                step === "municipality" ? "Search municipality..." : "Search ward or place..."
+                step === "municipality" ? "Search municipality..."
+                : step === "ward" ? "Search ward or place..."
+                : "Search place..."
               }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -242,15 +288,43 @@ export default function AreaSelector({ onSelect, onClose }: AreaSelectorProps) {
                 <li key={ward.number}>
                   <button
                     onClick={() => handleWardSelect(ward)}
-                    className="w-full text-left px-5 py-3 text-zinc-200 hover:bg-zinc-800 transition-colors text-sm flex items-center gap-3"
+                    className="w-full text-left px-5 py-3 text-zinc-200 hover:bg-zinc-800 transition-colors text-sm flex items-center justify-between gap-3"
                   >
-                    <span className="w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
-                      {ward.number}
+                    <span className="flex items-center gap-3">
+                      <span className="w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
+                        {ward.number}
+                      </span>
+                      <span className="flex flex-col">
+                        <span className="font-medium">Ward {ward.number}</span>
+                        <span className="text-zinc-500 text-xs">{ward.places.join(", ")}</span>
+                      </span>
                     </span>
-                    <span className="flex flex-col">
-                      <span className="font-medium">Ward {ward.number}</span>
-                      <span className="text-zinc-500 text-xs">{ward.places.join(", ")}</span>
-                    </span>
+                    {ward.places.length > 1 && (
+                      <svg className="w-4 h-4 text-zinc-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    )}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+
+        {/* Place list */}
+        {step === "place" && (
+          <ul className="max-h-64 overflow-y-auto">
+            {filteredPlaces.length === 0 ? (
+              <li className="px-5 py-8 text-center text-zinc-500 text-sm">No results found</li>
+            ) : (
+              filteredPlaces.map((place) => (
+                <li key={place}>
+                  <button
+                    onClick={() => handlePlaceSelect(place)}
+                    className="w-full text-left px-5 py-3.5 text-zinc-200 hover:bg-zinc-800 transition-colors text-sm flex items-center gap-3"
+                  >
+                    <span className="text-base">🏘️</span>
+                    <span>{place}</span>
                   </button>
                 </li>
               ))

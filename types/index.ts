@@ -26,6 +26,7 @@ export interface Post {
   image_url?: string | null;
   created_at: string;
   reported?: boolean;
+  posted_by?: string | null;
 }
 
 export interface NewPost {
