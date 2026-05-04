@@ -190,7 +190,7 @@ export default function Home() {
   }
 
   async function handleReport(postId: string, _reason: string) {
-    await supabase.from("posts").update({ reported: true }).eq("id", postId);
+    await supabase.from("posts").update({ reported: true } as never).eq("id", postId);
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, reported: true } : p)));
   }
 
