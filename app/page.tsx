@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import type { User } from "@supabase/supabase-js";
+import type { User, AuthChangeEvent, Session } from "@supabase/supabase-js";
 import Navbar from "@/components/Navbar";
 import AreaSelector from "@/components/AreaSelector";
 import AuthModal from "@/components/AuthModal";
@@ -93,7 +93,7 @@ export default function Home() {
   // Auth listener — profile checked exactly once per sign-in cycle
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         const sessionUser = session?.user ?? null;
         setUser(sessionUser);
 

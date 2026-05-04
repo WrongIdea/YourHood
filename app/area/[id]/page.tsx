@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import type { User } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { Post, Category } from "@/types";
 import Feed from "@/components/Feed";
@@ -25,9 +25,9 @@ export default function AreaPage() {
   const provinceName = posts[0]?.province_name ?? "";
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => setUser(data.user));
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_, session) => setUser(session?.user ?? null)
+      (_: string, session: Session | null) => setUser(session?.user ?? null)
     );
     return () => subscription.unsubscribe();
   }, []);
